@@ -1,98 +1,11 @@
-const bcrypt = require('bcryptjs');
+const authResolver = require('./auth');
+const eventsResolver = require('./events');
+const bookingResolver = require('./bookings');
 
-const Event = require('../../models/event');
-const User = require('../../models/users');
-
-const events = async eventIds => {
-    try {
-        const events = await Event.find({_id: {$in: eventIds}})
-        events.map(event => {
-            return {
-                ...event._doc,
-                date: new Date(event._doc.date).toISOString(),
-                creator: user.bind(this, event.creator)
-            };
-        });
-        return events;
-    } catch (err) {
-        throw err;
-    }
+const rootResolver = {
+    ...authResolver,
+    ...eventsResolver,
+    ...bookingResolver
 };
 
-const user = async userId => {
-    try {
-        const user = await User.findById(userId)
-        return {
-            ...user._doc,
-            createdEvents: events.bind(this, user._doc.createdEvents)       
-        };
-    } catch (err) {
-        throw err;
-    }
-};
-
-module.exports = {
-    events: async () => {
-        try {
-            const events = await Event.find()
-            return events.map(event => {
-                return {
-                    ...event._doc,
-                    date: new Date(event._doc.date).toISOString(),
-                    creator: user.bind(this, event._doc.creator)
-                };
-            });
-        } catch (err) {
-            throw err;
-        }
-    },
-    createEvent: async args => {
-        const event = new Event({
-            title: args.eventInput.title,
-            description: args.eventInput.description,
-            price: +args.eventInput.price,
-            date: new Date(args.eventInput.date),
-            creator: "5ed5069db5a01a6c40292ab9"
-        });
-        let createdEvent;
-        try {
-            const result = await event.save()
-            createdEvent = {
-                ...result._doc, 
-                date: new Date(event._doc.date).toISOString(),
-                creator: user.bind(this, result._doc.creator)
-            };
-            const creator = await User.findById('5ed5069db5a01a6c40292ab9');
-
-            if (!creator) {
-                throw new Error('User not found.')
-            }
-            creator.createdEvents.push(event);
-            await creator.save();
-
-            return createdEvent;
-        } catch (err) {
-            console.log(err);
-            throw err;
-        }
-    },
-    createUser: async args => {
-        try {
-            const existingUser = await User.findOne({email: args.userInput.email})
-            if (existingUser) {
-                throw new Error('User exists already.')
-            }
-            const hashedPassword = await bcrypt.hash(args.userInput.password, 12)
-
-            const user = new User({
-                email: args.userInput.email,
-                password: hashedPassword
-            })
-
-            const result = await user.save();
-            return { ...result._doc, password: null};
-        } catch (err) {
-            throw err;
-        }
-    }
-}
+module.exports = rootResolver;
